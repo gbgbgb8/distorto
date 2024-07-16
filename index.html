@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive RGB Distortion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <div class="control">
+            <label for="text-input">Text:</label>
+            <input type="text" id="text-input" value="Hello, world!">
+        </div>
+        <div class="control">
+            <label for="font-size">Font Size:</label>
+            <input type="range" id="font-size" min="12" max="100" value="48">
+            <span id="font-size-value">48px</span>
+        </div>
+        <div class="control">
+            <label for="distortion-strength">Distortion Strength:</label>
+            <input type="range" id="distortion-strength" min="0" max="5" step="0.1" value="1.5">
+            <span id="distortion-strength-value">1.5</span>
+        </div>
+        <div class="control">
+            <label for="distortion-radius">Distortion Radius:</label>
+            <input type="range" id="distortion-radius" min="50" max="500" value="190">
+            <span id="distortion-radius-value">190px</span>
+        </div>
+        <div class="control">
+            <label for="rgb-separation">RGB Separation:</label>
+            <input type="range" id="rgb-separation" min="0" max="0.1" step="0.001" value="0.025">
+            <span id="rgb-separation-value">0.025</span>
+        </div>
+        <div class="control">
+            <label for="iterations">Iterations:</label>
+            <input type="range" id="iterations" min="1" max="20" value="10">
+            <span id="iterations-value">10</span>
+        </div>
+        <div class="control">
+            <label for="background-color">Background Color:</label>
+            <input type="color" id="background-color" value="#000000">
+        </div>
+        <div class="control">
+            <label for="text-color">Text Color:</label>
+            <input type="color" id="text-color" value="#ffffff">
+        </div>
+        <div class="control">
+            <button id="randomize">Randomize</button>
+            <button id="reset">Reset</button>
+        </div>
+    </div>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        attribute vec2 a_texCoord;
+        varying vec2 v_texCoord;
+        void main() {
+            gl_Position = vec4(a_position, 0, 1);
+            v_texCoord = a_texCoord;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision highp float;
+        uniform sampler2D u_image;
+        uniform vec2 u_resolution;
+        uniform vec2 u_mouse;
+        uniform float u_distortionStrength;
+        uniform float u_distortionRadius;
+        uniform float u_rgbSeparation;
+        uniform int u_iterations;
+        varying vec2 v_texCoord;
+
+        vec2 distort(vec2 p, vec2 l) {
+            float dist = distance(l, p);
+            float maxDist = u_distortionRadius / max(u_resolution.x, u_resolution.y);
+            float factor = clamp(1.0 - dist / maxDist, 0.0, 1.0);
+            factor = -pow(factor, 2.0) * u_distortionStrength;
+            return (p - l) * factor;
+        }
+
+        void main() {
+            vec2 p = gl_FragCoord.xy / u_resolution;
+            vec2 l = u_mouse / u_resolution;
+            
+            vec2 m = distort(p, l);
+            
+            vec3 color = vec3(0.0);
+            for (int i = 0; i < 20; i++) {
+                if (i >= u_iterations) break;
+                float s = 0.175 + 0.005 * float(i);
+                color.r += texture2D(u_image, p + s * m).r;
+                color.g += texture2D(u_image, p + (s + u_rgbSeparation) * m).g;
+                color.b += texture2D(u_image, p + (s + u_rgbSeparation * 2.0) * m).b;
+            }
+            color /= float(u_iterations);
+            
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

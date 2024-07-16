@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive RGB Distortion</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #canvas {
+            border: 1px solid #000;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-width: 800px;
+        }
+        .control {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <div class="control">
+            <label for="text-input">Text:</label>
+            <input type="text" id="text-input" value="Hello, world!">
+        </div>
+        <div class="control">
+            <label for="font-size">Font Size:</label>
+            <input type="range" id="font-size" min="12" max="100" value="48">
+            <span id="font-size-value">48px</span>
+        </div>
+        <div class="control">
+            <label for="distortion-strength">Distortion Strength:</label>
+            <input type="range" id="distortion-strength" min="0" max="5" step="0.1" value="1.5">
+            <span id="distortion-strength-value">1.5</span>
+        </div>
+        <div class="control">
+            <label for="distortion-radius">Distortion Radius:</label>
+            <input type="range" id="distortion-radius" min="50" max="500" value="190">
+            <span id="distortion-radius-value">190px</span>
+        </div>
+        <div class="control">
+            <label for="rgb-separation">RGB Separation:</label>
+            <input type="range" id="rgb-separation" min="0" max="0.1" step="0.001" value="0.025">
+            <span id="rgb-separation-value">0.025</span>
+        </div>
+        <div class="control">
+            <label for="iterations">Iterations:</label>
+            <input type="range" id="iterations" min="1" max="20" value="10">
+            <span id="iterations-value">10</span>
+        </div>
+        <div class="control">
+            <label for="background-color">Background Color:</label>
+            <input type="color" id="background-color" value="#000000">
+        </div>
+        <div class="control">
+            <label for="text-color">Text Color:</label>
+            <input type="color" id="text-color" value="#ffffff">
+        </div>
+    </div>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        attribute vec2 a_texCoord;
+        varying vec2 v_texCoord;
+        void main() {
+            gl_Position = vec4(a_position, 0, 1);
+            v_texCoord = a_texCoord;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision highp float;
+        uniform sampler2D u_image;
+        uniform vec2 u_resolution;
+        uniform vec2 u_mouse;
+        uniform float u_distortionStrength;
+        uniform float u_distortionRadius;
+        uniform float u_rgbSeparation;
+        uniform int u_iterations;
+        varying vec2 v_texCoord;
+
+        vec2 distort(vec2 p, vec2 l) {
+            float dist = distance(l, p);
+            float maxDist = u_distortionRadius / max(u_resolution.x, u_resolution.y);
+            float factor = clamp(1.0 - dist / maxDist, 0.0, 1.0);
+            factor = -pow(factor, 2.0) * u_distortionStrength;
+            return (p - l) * factor;
+        }
+
+        void main() {
+            vec2 p = gl_FragCoord.xy / u_resolution;
+            vec2 l = u_mouse / u_resolution;
+            
+            vec2 m = distort(p, l);
+            
+            vec3 color = vec3(0.0);
+            for (int i = 0; i < 20; i++) {
+                if (i >= u_iterations) break;
+                float s = 0.175 + 0.005 * float(i);
+                color.r += texture2D(u_image, p + s * m).r;
+                color.g += texture2D(u_image, p + (s + u_rgbSeparation) * m).g;
+                color.b += texture2D(u_image, p + (s + u_rgbSeparation * 2.0) * m).b;
+            }
+            color /= float(u_iterations);
+            
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl');
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            return program;
+        }
+
+        const vertexShaderSource = document.getElementById('vertexShader').text;
+        const fragmentShaderSource = document.getElementById('fragmentShader').text;
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+        const program = createProgram(gl, vertexShader, fragmentShader);
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1,
+        ]), gl.STATIC_DRAW);
+
+        const texCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            0, 1,
+            1, 1,
+            0, 0,
+            1, 0,
+        ]), gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        const texCoordLocation = gl.getAttribLocation(program, 'a_texCoord');
+
+        gl.enableVertexAttribArray(positionLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(texCoordLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+        const mouseLocation = gl.getUniformLocation(program, 'u_mouse');
+        const distortionStrengthLocation = gl.getUniformLocation(program, 'u_distortionStrength');
+        const distortionRadiusLocation = gl.getUniformLocation(program, 'u_distortionRadius');
+        const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
+        const iterationsLocation = gl.getUniformLocation(program, 'u_iterations');
+
+        let mouseX = 0, mouseY = 0;
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = canvas.height - (e.clientY - rect.top);
+            render();
+        });
+
+        function createTextTexture(text, fontSize, textColor, backgroundColor) {
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = canvas.width;
+            offscreenCanvas.height = canvas.height;
+            const ctx = offscreenCanvas.getContext(‘2d’);
+ctx.fillStyle = backgroundColor;
+ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+ctx.font = ${fontSize}px Arial;
+ctx.fillStyle = textColor;
+ctx.textAlign = ‘center’;
+ctx.textBaseline = ‘middle’;
+const lines = text.split(’\n’);
+const lineHeight = fontSize * 1.2;        ctx.save();
+        ctx.translate(offscreenCanvas.width / 2, offscreenCanvas.height / 2);
+        ctx.scale(1, -1);
+        
+        lines.forEach((line, index) => {
+            const yPos = - (lines.length - 1) * lineHeight / 2 + index * lineHeight;
+            ctx.fillText(line, 0, yPos);
+        });
+
+        ctx.restore();
+
+        return offscreenCanvas;
+    }
+
+    function updateTexture() {
+        const text = document.getElementById('text-input').value;
+        const fontSize = document.getElementById('font-size').value;
+        const backgroundColor = document.getElementById('background-color').value;
+        const textColor = document.getElementById('text-color').value;
+        const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textTexture);
+        render();
+    }
+
+    function render() {
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(program);
+        gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+        gl.uniform2f(mouseLocation, mouseX, mouseY);
+        gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
+        gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
+        gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
+        gl.uniform1i(iterationsLocation, parseInt(document.getElementById('iterations').value));
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    document.getElementById('text-input').addEventListener('input', updateTexture);
+    document.getElementById('font-size').addEventListener('input', (e) => {
+        document.getElementById('font-size-value').textContent = `${e.target.value}px`;
+        updateTexture();
+    });
+    document.getElementById('distortion-strength').addEventListener('input', (e) => {
+        document.getElementById('distortion-strength-value').textContent = e.target.value;
+        render();
+    });
+    document.getElementById('distortion-radius').addEventListener('input', (e) => {
+        document.getElementById('distortion-radius-value').textContent = `${e.target.value}px`;
+        render();
+    });
+    document.getElementById('rgb-separation').addEventListener('input', (e) => {
+        document.getElementById('rgb-separation-value').textContent = e.target.value;
+        render();
+    });
+    document.getElementById('iterations').addEventListener('input', (e) => {
+        document.getElementById('iterations-value').textContent = e.target.value;
+        render();
+    });
+    document.getElementById('background-color').addEventListener('input', updateTexture);
+    document.getElementById('text-color').addEventListener('input', updateTexture);
+
+    updateTexture();
+</script></body>
+</html>
+```
