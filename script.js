@@ -75,14 +75,6 @@ canvas.addEventListener('mousemove', (e) => {
     render();
 });
 
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    mouseX = e.touches[0].clientX - rect.left;
-    mouseY = canvas.height - (e.touches[0].clientY - rect.top);
-    render();
-}, { passive: false });
-
 function createTextTexture(text, fontSize, textColor, backgroundColor) {
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = canvas.width;
@@ -171,6 +163,7 @@ function updateAllValues() {
     updateTexture();
 }
 
+// Set up event listeners for controls
 document.getElementById('text-input').addEventListener('input', updateTexture);
 document.getElementById('font-size').addEventListener('input', (e) => {
     document.getElementById('font-size-value').textContent = `${e.target.value}px`;
@@ -192,4 +185,10 @@ document.getElementById('iterations').addEventListener('input', (e) => {
     document.getElementById('iterations-value').textContent = e.target.value;
     render();
 });
-document.getElement
+document.getElementById('background-color').addEventListener('input', updateTexture);
+document.getElementById('text-color').addEventListener('input', updateTexture);
+document.getElementById('randomize').addEventListener('click', randomizeSettings);
+document.getElementById('reset').addEventListener('click', resetSettings);
+
+// Initial render
+updateTexture();
