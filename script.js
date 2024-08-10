@@ -1,33 +1,10 @@
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
-
 const canvas = document.getElementById('canvas');
 const gl = canvas.getContext('webgl');
-
-if (!gl) {
-    console.error('WebGL not supported');
-    alert('WebGL is not supported in your browser.');
-}
 
 function createShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
     return shader;
 }
 
@@ -36,10 +13,6 @@ function createProgram(gl, vertexShader, fragmentShader) {
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
-        return null;
-    }
     return program;
 }
 
@@ -95,18 +68,19 @@ const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
 const iterationsLocation = gl.getUniformLocation(program, 'u_iterations');
 
 let mouseX = 0, mouseY = 0;
-
-function handlePointerMove(e) {
+canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     mouseX = e.clientX - rect.left;
     mouseY = canvas.height - (e.clientY - rect.top);
     render();
-}
+});
 
-canvas.addEventListener('mousemove', handlePointerMove);
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    handlePointerMove(e.touches[0]);
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.touches[0].clientX - rect.left;
+    mouseY = canvas.height - (e.touches[0].clientY - rect.top);
+    render();
 }, { passive: false });
 
 function createTextTexture(text, fontSize, textColor, backgroundColor) {
@@ -148,7 +122,9 @@ function updateTexture() {
 }
 
 function render() {
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     gl.useProgram(program);
     gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
     gl.uniform2f(mouseLocation, mouseX, mouseY);
@@ -174,7 +150,7 @@ function randomizeSettings() {
 }
 
 function resetSettings() {
-    document.getElementById('text-input').value = "Distorto";
+    document.getElementById('text-input').value = "Hello, world!";
     document.getElementById('font-size').value = 48;
     document.getElementById('distortion-strength').value = 1.5;
     document.getElementById('distortion-radius').value = 190;
@@ -195,26 +171,32 @@ function updateAllValues() {
     updateTexture();
 }
 
-function resizeCanvas() {
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientWidth * 0.5625; // 16:9 aspect ratio
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    updateTexture();
-}
-
-window.addEventListener('resize', resizeCanvas);
-
 document.getElementById('text-input').addEventListener('input', updateTexture);
-document.getElementById('font-size').addEventListener('input', updateAllValues);
-document.getElementById('distortion-strength').addEventListener('input', updateAllValues);
-document.getElementById('distortion-radius').addEventListener('input', updateAllValues);
-document.getElementById('rgb-separation').addEventListener('input', updateAllValues);
-document.getElementById('iterations').addEventListener('input', updateAllValues);
+document.getElementById('font-size').addEventListener('input', (e) => {
+    document.getElementById('font-size-value').textContent = `${e.target.value}px`;
+    updateTexture();
+});
+document.getElementById('distortion-strength').addEventListener('input', (e) => {
+    document.getElementById('distortion-strength-value').textContent = e.target.value;
+    render();
+});
+document.getElementById('distortion-radius').addEventListener('input', (e) => {
+    document.getElementById('distortion-radius-value').textContent = `${e.target.value}px`;
+    render();
+});
+document.getElementById('rgb-separation').addEventListener('input', (e) => {
+    document.getElementById('rgb-separation-value').textContent = e.target.value;
+    render();
+});
+document.getElementById('iterations').addEventListener('input', (e) => {
+    document.get
+
+ElementById('iterations-value').textContent = e.target.value;
+    render();
+});
 document.getElementById('background-color').addEventListener('input', updateTexture);
 document.getElementById('text-color').addEventListener('input', updateTexture);
 document.getElementById('randomize').addEventListener('click', randomizeSettings);
 document.getElementById('reset').addEventListener('click', resetSettings);
 
-resizeCanvas();
-resetSettings();
+updateTexture();
