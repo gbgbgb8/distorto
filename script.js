@@ -68,41 +68,26 @@ const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
 const iterationsLocation = gl.getUniformLocation(program, 'u_iterations');
 
 let mouseX = 0, mouseY = 0;
-let isTouching = false;
-
-function handlePointerMove(e) {
+canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    mouseX = clientX - rect.left;
-    mouseY = canvas.height - (clientY - rect.top);
+    mouseX = e.clientX - rect.left;
+    mouseY = canvas.height - (e.clientY - rect.top);
     render();
-}
+});
 
-canvas.addEventListener('mousemove', handlePointerMove);
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    if (isTouching) {
-        handlePointerMove(e);
-    }
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.touches[0].clientX - rect.left;
+    mouseY = canvas.height - (e.touches[0].clientY - rect.top);
+    render();
 }, { passive: false });
-
-canvas.addEventListener('touchstart', (e) => {
-    isTouching = true;
-    handlePointerMove(e);
-});
-
-canvas.addEventListener('touchend', () => {
-    isTouching = false;
-});
 
 function createTextTexture(text, fontSize, textColor, backgroundColor) {
     const offscreenCanvas = document.createElement('canvas');
-    const scaleFactor = window.devicePixelRatio || 1;
-    offscreenCanvas.width = canvas.width * scaleFactor;
-    offscreenCanvas.height = canvas.height * scaleFactor;
+    offscreenCanvas.width = canvas.width;
+    offscreenCanvas.height = canvas.height;
     const ctx = offscreenCanvas.getContext('2d');
-    ctx.scale(scaleFactor, scaleFactor);
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
     ctx.font = `${fontSize}px Arial`;
@@ -134,28 +119,6 @@ function updateTexture() {
     const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textTexture);
     render();
-}
-
-function resizeCanvas() {
-    const scaleFactor = window.devicePixelRatio || 1;
-    canvas.width = canvas.clientWidth * scaleFactor;
-    canvas.height = canvas.clientHeight * scaleFactor;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    updateTexture();
-}
-
-window.addEventListener('resize', debounce(resizeCanvas, 250));
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
 }
 
 function render() {
@@ -226,7 +189,9 @@ document.getElementById('rgb-separation').addEventListener('input', (e) => {
     render();
 });
 document.getElementById('iterations').addEventListener('input', (e) => {
-    document.getElementById('iterations-value').textContent = e.target.value;
+    document.get
+
+ElementById('iterations-value').textContent = e.target.value;
     render();
 });
 document.getElementById('background-color').addEventListener('input', updateTexture);
@@ -234,5 +199,4 @@ document.getElementById('text-color').addEventListener('input', updateTexture);
 document.getElementById('randomize').addEventListener('click', randomizeSettings);
 document.getElementById('reset').addEventListener('click', resetSettings);
 
-resizeCanvas();
 updateTexture();
