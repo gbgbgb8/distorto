@@ -31,6 +31,7 @@ body {
     margin: 0 auto 30px;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
+    touch-action: none;
 }
 
 .controls {
@@ -152,21 +153,6 @@ span {
     color: var(--primary-color);
 }
 
-@media (max-width: 768px) {
-    .controls {
-        grid-template-columns: 1fr;
-    }
-
-    #canvas {
-        max-width: 100%;
-    }
-
-    body {
-        padding: 10px;
-    }
-}
-
-/* Fancy title for the app */
 .app-title {
     text-align: center;
     font-size: 2.5em;
@@ -186,7 +172,6 @@ span {
     margin: 10px auto;
 }
 
-/* Footer */
 .footer {
     text-align: center;
     margin-top: 50px;
@@ -203,4 +188,46 @@ span {
 
 .footer a:hover {
     text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    .controls {
+        grid-template-columns: 1fr;
+    }
+
+    #canvas {
+        max-width: 100%;
+        touch-action: none;
+    }
+
+    .control {
+        padding: 15px;
+    }
+
+    input[type="range"] {
+        width: calc(100% - 70px);
+    }
+
+    span {
+        min-width: 60px;
+        display: inline-block;
+        text-align: right;
+    }
+
+    button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .app-title {
+        font-size: 2em;
+    }
 }
