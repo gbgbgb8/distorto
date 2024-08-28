@@ -123,7 +123,7 @@ function init() {
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left;
-        mouseY = canvas.height - (e.clientY - rect.top);
+        mouseY = rect.height - (e.clientY - rect.top); // Change canvas.height to rect.height
         render();
     });
 
@@ -131,7 +131,7 @@ function init() {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
         mouseX = e.touches[0].clientX - rect.left;
-        mouseY = canvas.height - (e.touches[0].clientY - rect.top);
+        mouseY = rect.height - (e.touches[0].clientY - rect.top); // Change canvas.height to rect.height
         render();
     }, { passive: false });
 
@@ -192,6 +192,7 @@ function init() {
 
         gl.useProgram(program);
         gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+        // Adjust mouse coordinates to match WebGL coordinate system
         gl.uniform2f(mouseLocation, mouseX, mouseY);
         gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
         gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
@@ -272,8 +273,11 @@ function init() {
     });
 
     function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * pixelRatio;
+        canvas.height = window.innerHeight * pixelRatio;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
         gl.viewport(0, 0, canvas.width, canvas.height);
         updateTexture();
     }
