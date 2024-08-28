@@ -12,18 +12,3 @@ Distorto is an interactive RGB distortion web application that allows users to c
 ## Live Demo
 
 You can try out Distorto here: [https://distorto.vercel.app](https://distorto.vercel.app)
-
-## Getting Started
-
-To run Distorto locally:
-
-1. Clone this repository
-2. Open `index.html` in a modern web browser
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is open source and available under the [MIT License](LICENSE).
