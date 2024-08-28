@@ -66,6 +66,7 @@ const distortionStrengthLocation = gl.getUniformLocation(program, 'u_distortionS
 const distortionRadiusLocation = gl.getUniformLocation(program, 'u_distortionRadius');
 const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
 const iterationsLocation = gl.getUniformLocation(program, 'u_iterations');
+const tilingLocation = gl.getUniformLocation(program, 'u_tiling');
 
 let mouseX = 0, mouseY = 0;
 canvas.addEventListener('mousemove', (e) => {
@@ -83,7 +84,7 @@ canvas.addEventListener('touchmove', (e) => {
     render();
 }, { passive: false });
 
-function createTextTexture(text, fontSize, textColor, backgroundColor) {
+function createTextTexture(text, fontSize, textColor, backgroundColor, tiling) {
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = canvas.width;
     offscreenCanvas.height = canvas.height;
@@ -97,16 +98,23 @@ function createTextTexture(text, fontSize, textColor, backgroundColor) {
     const lines = text.split('\\n');
     const lineHeight = fontSize * 1.2;
 
-    ctx.save();
-    ctx.translate(offscreenCanvas.width / 2, offscreenCanvas.height / 2);
-    ctx.scale(1, -1);
-    
-    lines.forEach((line, index) => {
-        const yPos = - (lines.length - 1) * lineHeight / 2 + index * lineHeight;
-        ctx.fillText(line, 0, yPos);
-    });
+    const tileWidth = offscreenCanvas.width / tiling;
+    const tileHeight = offscreenCanvas.height / tiling;
 
-    ctx.restore();
+    for (let x = 0; x < tiling; x++) {
+        for (let y = 0; y < tiling; y++) {
+            ctx.save();
+            ctx.translate(x * tileWidth + tileWidth / 2, y * tileHeight + tileHeight / 2);
+            ctx.scale(1, -1);
+            
+            lines.forEach((line, index) => {
+                const yPos = - (lines.length - 1) * lineHeight / 2 + index * lineHeight;
+                ctx.fillText(line, 0, yPos);
+            });
+
+            ctx.restore();
+        }
+    }
 
     return offscreenCanvas;
 }
@@ -116,7 +124,8 @@ function updateTexture() {
     const fontSize = document.getElementById('font-size').value;
     const backgroundColor = document.getElementById('background-color').value;
     const textColor = document.getElementById('text-color').value;
-    const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor);
+    const tiling = parseInt(document.getElementById('tiling').value);
+    const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor, tiling);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textTexture);
     render();
 }
@@ -132,6 +141,7 @@ function render() {
     gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
     gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
     gl.uniform1i(iterationsLocation, parseInt(document.getElementById('iterations').value));
+    gl.uniform1f(tilingLocation, parseFloat(document.getElementById('tiling').value));
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -145,6 +155,7 @@ function randomizeSettings() {
     document.getElementById('iterations').value = Math.floor(Math.random() * 19) + 1;
     document.getElementById('background-color').value = '#' + Math.floor(Math.random()*16777215).toString(16);
     document.getElementById('text-color').value = '#' + Math.floor(Math.random()*16777215).toString(16);
+    document.getElementById('tiling').value = Math.floor(Math.random() * 10) + 1;
     
     updateAllValues();
 }
@@ -158,6 +169,7 @@ function resetSettings() {
     document.getElementById('iterations').value = 10;
     document.getElementById('background-color').value = "#000000";
     document.getElementById('text-color').value = "#ffffff";
+    document.getElementById('tiling').value = 1;
     
     updateAllValues();
 }
@@ -168,6 +180,7 @@ function updateAllValues() {
     document.getElementById('distortion-radius-value').textContent = `${document.getElementById('distortion-radius').value}px`;
     document.getElementById('rgb-separation-value').textContent = document.getElementById('rgb-separation').value;
     document.getElementById('iterations-value').textContent = document.getElementById('iterations').value;
+    document.getElementById('tiling-value').textContent = `${document.getElementById('tiling').value}x${document.getElementById('tiling').value}`;
     updateTexture();
 }
 
@@ -189,14 +202,17 @@ document.getElementById('rgb-separation').addEventListener('input', (e) => {
     render();
 });
 document.getElementById('iterations').addEventListener('input', (e) => {
-    document.get
-
-ElementById('iterations-value').textContent = e.target.value;
+    document.getElementById('iterations-value').textContent = e.target.value;
     render();
 });
 document.getElementById('background-color').addEventListener('input', updateTexture);
 document.getElementById('text-color').addEventListener('input', updateTexture);
 document.getElementById('randomize').addEventListener('click', randomizeSettings);
 document.getElementById('reset').addEventListener('click', resetSettings);
+
+document.getElementById('tiling').addEventListener('input', (e) => {
+    document.getElementById('tiling-value').textContent = `${e.target.value}x${e.target.value}`;
+    updateTexture();
+});
 
 updateTexture();
