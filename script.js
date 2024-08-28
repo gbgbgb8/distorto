@@ -1,10 +1,45 @@
+function initWebGL(canvas) {
+    gl = null;
+    try {
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    } catch(e) {}
+    
+    if (!gl) {
+        alert("Unable to initialize WebGL. Your browser may not support it.");
+        return null;
+    }
+    return gl;
+}
+
+function getShaderError(gl, shader) {
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+        return gl.getShaderInfoLog(shader);
+    }
+    return null;
+}
+
+function getProgramError(gl, program) {
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
+        return gl.getProgramInfoLog(program);
+    }
+    return null;
+}
+
 const canvas = document.getElementById('canvas');
-const gl = canvas.getContext('webgl');
+const gl = initWebGL(canvas);
+if (!gl) return;
 
 function createShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
+    const error = getShaderError(gl, shader);
+    if (error) {
+        console.error('Shader compilation error:', error);
+        return null;
+    }
     return shader;
 }
 
@@ -13,6 +48,11 @@ function createProgram(gl, vertexShader, fragmentShader) {
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
+    const error = getProgramError(gl, program);
+    if (error) {
+        console.error('Program linking error:', error);
+        return null;
+    }
     return program;
 }
 
@@ -22,7 +62,17 @@ const fragmentShaderSource = document.getElementById('fragmentShader').text;
 const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
 const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
 
+if (!vertexShader || !fragmentShader) {
+    console.error('Failed to create shaders');
+    return;
+}
+
 const program = createProgram(gl, vertexShader, fragmentShader);
+
+if (!program) {
+    console.error('Failed to create program');
+    return;
+}
 
 const positionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -131,6 +181,11 @@ function updateTexture() {
 }
 
 function render() {
+    if (!program) {
+        console.error('No valid program to render');
+        return;
+    }
+
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -216,3 +271,13 @@ document.getElementById('tiling').addEventListener('input', (e) => {
 });
 
 updateTexture();
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    updateTexture();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
