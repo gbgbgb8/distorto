@@ -73,7 +73,7 @@
         uniform float u_distortionStrength;
         uniform float u_distortionRadius;
         uniform float u_rgbSeparation;
-        uniform float u_time;
+        uniform float u_rippleStrength;
         varying vec2 v_texCoord;
 
         vec2 distort(vec2 p, vec2 l) {
@@ -90,8 +90,8 @@
             
             vec2 m = distort(p, l);
             
-            // Add ripple effect
-            float ripple = sin(distance(p, l) * 50.0 - u_time * 10.0) * 0.005;
+            // Simplified ripple effect
+            float ripple = sin(distance(p, l) * 50.0) * u_rippleStrength;
             m += ripple * (p - l);
             
             vec3 color = vec3(0.0);

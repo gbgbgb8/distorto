@@ -116,11 +116,10 @@ function init() {
     const distortionStrengthLocation = gl.getUniformLocation(program, 'u_distortionStrength');
     const distortionRadiusLocation = gl.getUniformLocation(program, 'u_distortionRadius');
     const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
-    const timeLocation = gl.getUniformLocation(program, 'u_time');
+    const rippleStrengthLocation = gl.getUniformLocation(program, 'u_rippleStrength');
 
     let mouseX = 0, mouseY = 0;
-    let startTime = Date.now();
-    let lastClickTime = 0;
+    let rippleStrength = 0;
 
     canvas.addEventListener('mousemove', updateMousePosition);
     canvas.addEventListener('touchmove', updateTouchPosition);
@@ -148,7 +147,7 @@ function init() {
         } else if (e.type === 'touchstart') {
             updateTouchPosition(e);
         }
-        lastClickTime = Date.now();
+        rippleStrength = 0.02;
     }
 
     function createTextTexture(text, fontSize, textColor, backgroundColor, tiling) {
@@ -213,10 +212,8 @@ function init() {
         gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
         gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
         
-        const currentTime = Date.now();
-        const elapsedTime = (currentTime - startTime) / 1000.0;
-        const timeSinceLastClick = (currentTime - lastClickTime) / 1000.0;
-        gl.uniform1f(timeLocation, elapsedTime + Math.min(timeSinceLastClick * 5.0, 1.0));
+        rippleStrength *= 0.95;
+        gl.uniform1f(rippleStrengthLocation, rippleStrength);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         requestAnimationFrame(render);
