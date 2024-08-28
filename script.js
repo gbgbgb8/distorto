@@ -116,14 +116,12 @@ function init() {
     const distortionStrengthLocation = gl.getUniformLocation(program, 'u_distortionStrength');
     const distortionRadiusLocation = gl.getUniformLocation(program, 'u_distortionRadius');
     const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
-    const iterationsLocation = gl.getUniformLocation(program, 'u_iterations');
-    const tilingLocation = gl.getUniformLocation(program, 'u_tiling');
 
     let mouseX = 0, mouseY = 0;
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left;
-        mouseY = rect.height - (e.clientY - rect.top); // Change canvas.height to rect.height
+        mouseY = rect.height - (e.clientY - rect.top);
         render();
     });
 
@@ -131,7 +129,7 @@ function init() {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
         mouseX = e.touches[0].clientX - rect.left;
-        mouseY = rect.height - (e.touches[0].clientY - rect.top); // Change canvas.height to rect.height
+        mouseY = rect.height - (e.touches[0].clientY - rect.top);
         render();
     }, { passive: false });
 
@@ -192,13 +190,10 @@ function init() {
 
         gl.useProgram(program);
         gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-        // Adjust mouse coordinates to match WebGL coordinate system
         gl.uniform2f(mouseLocation, mouseX, mouseY);
         gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
         gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
         gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
-        gl.uniform1i(iterationsLocation, parseInt(document.getElementById('iterations').value));
-        gl.uniform1f(tilingLocation, parseFloat(document.getElementById('tiling').value));
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -209,7 +204,6 @@ function init() {
         document.getElementById('distortion-strength').value = (Math.random() * 5).toFixed(1);
         document.getElementById('distortion-radius').value = Math.floor(Math.random() * 450) + 50;
         document.getElementById('rgb-separation').value = (Math.random() * 0.1).toFixed(3);
-        document.getElementById('iterations').value = Math.floor(Math.random() * 19) + 1;
         document.getElementById('background-color').value = '#' + Math.floor(Math.random()*16777215).toString(16);
         document.getElementById('text-color').value = '#' + Math.floor(Math.random()*16777215).toString(16);
         document.getElementById('tiling').value = Math.floor(Math.random() * 10) + 1;
@@ -223,7 +217,6 @@ function init() {
         document.getElementById('distortion-strength').value = 1.5;
         document.getElementById('distortion-radius').value = 190;
         document.getElementById('rgb-separation').value = 0.025;
-        document.getElementById('iterations').value = 10;
         document.getElementById('background-color').value = "#000000";
         document.getElementById('text-color').value = "#ffffff";
         document.getElementById('tiling').value = 1;
@@ -236,7 +229,6 @@ function init() {
         document.getElementById('distortion-strength-value').textContent = document.getElementById('distortion-strength').value;
         document.getElementById('distortion-radius-value').textContent = `${document.getElementById('distortion-radius').value}px`;
         document.getElementById('rgb-separation-value').textContent = document.getElementById('rgb-separation').value;
-        document.getElementById('iterations-value').textContent = document.getElementById('iterations').value;
         document.getElementById('tiling-value').textContent = `${document.getElementById('tiling').value}x${document.getElementById('tiling').value}`;
         updateTexture();
     }
@@ -256,10 +248,6 @@ function init() {
     });
     document.getElementById('rgb-separation').addEventListener('input', (e) => {
         document.getElementById('rgb-separation-value').textContent = e.target.value;
-        render();
-    });
-    document.getElementById('iterations').addEventListener('input', (e) => {
-        document.getElementById('iterations-value').textContent = e.target.value;
         render();
     });
     document.getElementById('background-color').addEventListener('input', updateTexture);

@@ -12,3 +12,14 @@ Distorto is an interactive RGB distortion web application that allows users to c
 ## Live Demo
 
 You can try out Distorto here: [https://distorto.vercel.app](https://distorto.vercel.app)
+
+
+## Thanks
+
+Inspired by a snip I can't find:
+
+code:
+
+```
+[[stitchable]] half4 w(float2 p,SwiftUI::Layer a,float2 l,float2 v){float2 m=-vpow(clamp(1-length(l-p)/190,0.,1.),2)1.5;half3 c=0;for(float i=0;i<10;i++){float s=.175+.005i;c+=half3(a.sample(p+sm).r,a.sample(p+(s+.025)m).g,a.sample(p+(s+.05)m).b);}return half4(c/10,1);}
+```
