@@ -1,3 +1,30 @@
+function initWebGL(canvas) {
+    let gl = null;
+    try {
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    } catch(e) {}
+    
+    if (!gl) {
+        alert("Unable to initialize WebGL. Your browser may not support it.");
+        return null;
+    }
+    return gl;
+}
+
+function getShaderError(gl, shader) {
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        return gl.getShaderInfoLog(shader);
+    }
+    return null;
+}
+
+function getProgramError(gl, program) {
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        return gl.getProgramInfoLog(program);
+    }
+    return null;
+}
+
 function init() {
     const canvas = document.getElementById('canvas');
     const gl = initWebGL(canvas);
