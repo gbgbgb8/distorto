@@ -73,12 +73,12 @@
         uniform float u_distortionStrength;
         uniform float u_distortionRadius;
         uniform float u_rgbSeparation;
-        uniform int u_iterations;
+        uniform float u_time;
         varying vec2 v_texCoord;
 
         vec2 distort(vec2 p, vec2 l) {
             float dist = distance(l, p);
-            float maxDist = u_distortionRadius / max(u_resolution.x, u_resolution.y);
+            float maxDist = u_distortionRadius / min(u_resolution.x, u_resolution.y);
             float factor = clamp(1.0 - dist / maxDist, 0.0, 1.0);
             factor = -pow(factor, 2.0) * u_distortionStrength;
             return factor * (p - l);
@@ -89,6 +89,10 @@
             vec2 l = u_mouse / u_resolution;
             
             vec2 m = distort(p, l);
+            
+            // Add ripple effect
+            float ripple = sin(distance(p, l) * 50.0 - u_time * 10.0) * 0.005;
+            m += ripple * (p - l);
             
             vec3 color = vec3(0.0);
             for (int i = 0; i < 10; i++) {

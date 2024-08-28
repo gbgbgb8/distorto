@@ -116,22 +116,40 @@ function init() {
     const distortionStrengthLocation = gl.getUniformLocation(program, 'u_distortionStrength');
     const distortionRadiusLocation = gl.getUniformLocation(program, 'u_distortionRadius');
     const rgbSeparationLocation = gl.getUniformLocation(program, 'u_rgbSeparation');
+    const timeLocation = gl.getUniformLocation(program, 'u_time');
 
     let mouseX = 0, mouseY = 0;
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = rect.height - (e.clientY - rect.top);
-        render();
-    });
+    let startTime = Date.now();
+    let lastClickTime = 0;
 
-    canvas.addEventListener('touchmove', (e) => {
+    canvas.addEventListener('mousemove', updateMousePosition);
+    canvas.addEventListener('touchmove', updateTouchPosition);
+    canvas.addEventListener('click', handleInteraction);
+    canvas.addEventListener('touchstart', handleInteraction);
+
+    function updateMousePosition(e) {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+        mouseY = (rect.bottom - e.clientY) * (canvas.height / rect.height);
+        render();
+    }
+
+    function updateTouchPosition(e) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.touches[0].clientX - rect.left;
-        mouseY = rect.height - (e.touches[0].clientY - rect.top);
+        mouseX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+        mouseY = (rect.bottom - e.touches[0].clientY) * (canvas.height / rect.height);
         render();
-    }, { passive: false });
+    }
+
+    function handleInteraction(e) {
+        if (e.type === 'click') {
+            updateMousePosition(e);
+        } else if (e.type === 'touchstart') {
+            updateTouchPosition(e);
+        }
+        lastClickTime = Date.now();
+    }
 
     function createTextTexture(text, fontSize, textColor, backgroundColor, tiling) {
         const offscreenCanvas = document.createElement('canvas');
@@ -194,8 +212,14 @@ function init() {
         gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
         gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
         gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
+        
+        const currentTime = Date.now();
+        const elapsedTime = (currentTime - startTime) / 1000.0;
+        const timeSinceLastClick = (currentTime - lastClickTime) / 1000.0;
+        gl.uniform1f(timeLocation, elapsedTime + Math.min(timeSinceLastClick * 5.0, 1.0));
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(render);
     }
 
     function randomizeSettings() {
@@ -273,7 +297,7 @@ function init() {
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    updateTexture();
+    render();
 }
 
 window.onload = init;
