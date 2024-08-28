@@ -1,32 +1,3 @@
-function initWebGL(canvas) {
-    let gl = null;
-    try {
-        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    } catch(e) {}
-    
-    if (!gl) {
-        alert("Unable to initialize WebGL. Your browser may not support it.");
-        return null;
-    }
-    return gl;
-}
-
-function getShaderError(gl, shader) {
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
-        return gl.getShaderInfoLog(shader);
-    }
-    return null;
-}
-
-function getProgramError(gl, program) {
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
-        return gl.getProgramInfoLog(program);
-    }
-    return null;
-}
-
 function init() {
     const canvas = document.getElementById('canvas');
     const gl = initWebGL(canvas);
@@ -121,16 +92,67 @@ function init() {
     let mouseX = 0, mouseY = 0;
     let rippleStrength = 0;
 
-    canvas.addEventListener('mousemove', updateMousePosition);
-    canvas.addEventListener('touchmove', updateTouchPosition);
-    canvas.addEventListener('click', handleInteraction);
-    canvas.addEventListener('touchstart', handleInteraction);
+    let animationFrameId = null;
+    let needsTextureUpdate = false;
+    let needsRender = false;
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function updateTexture() {
+        const text = document.getElementById('text-input').value;
+        const fontSize = document.getElementById('font-size').value;
+        const backgroundColor = document.getElementById('background-color').value;
+        const textColor = document.getElementById('text-color').value;
+        const tiling = parseInt(document.getElementById('tiling').value);
+        const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor, tiling);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textTexture);
+        needsRender = true;
+    }
+
+    const debouncedUpdateTexture = debounce(updateTexture, 100);
+
+    function render() {
+        if (needsTextureUpdate) {
+            updateTexture();
+            needsTextureUpdate = false;
+        }
+
+        if (needsRender) {
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(program);
+            gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+            gl.uniform2f(mouseLocation, mouseX, mouseY);
+            gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
+            gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
+            gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
+            
+            rippleStrength *= 0.95;
+            gl.uniform1f(rippleStrengthLocation, rippleStrength);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            needsRender = false;
+        }
+
+        animationFrameId = requestAnimationFrame(render);
+    }
 
     function updateMousePosition(e) {
         const rect = canvas.getBoundingClientRect();
         mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
         mouseY = (rect.bottom - e.clientY) * (canvas.height / rect.height);
-        render();
+        needsRender = true;
     }
 
     function updateTouchPosition(e) {
@@ -138,7 +160,7 @@ function init() {
         const rect = canvas.getBoundingClientRect();
         mouseX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
         mouseY = (rect.bottom - e.touches[0].clientY) * (canvas.height / rect.height);
-        render();
+        needsRender = true;
     }
 
     function handleInteraction(e) {
@@ -148,7 +170,13 @@ function init() {
             updateTouchPosition(e);
         }
         rippleStrength = 0.02;
+        needsRender = true;
     }
+
+    canvas.addEventListener('mousemove', updateMousePosition);
+    canvas.addEventListener('touchmove', updateTouchPosition);
+    canvas.addEventListener('click', handleInteraction);
+    canvas.addEventListener('touchstart', handleInteraction);
 
     function createTextTexture(text, fontSize, textColor, backgroundColor, tiling) {
         const offscreenCanvas = document.createElement('canvas');
@@ -185,40 +213,6 @@ function init() {
         return offscreenCanvas;
     }
 
-    function updateTexture() {
-        const text = document.getElementById('text-input').value;
-        const fontSize = document.getElementById('font-size').value;
-        const backgroundColor = document.getElementById('background-color').value;
-        const textColor = document.getElementById('text-color').value;
-        const tiling = parseInt(document.getElementById('tiling').value);
-        const textTexture = createTextTexture(text, fontSize, textColor, backgroundColor, tiling);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textTexture);
-        render();
-    }
-
-    function render() {
-        if (!program) {
-            console.error('No valid program to render');
-            return;
-        }
-
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(program);
-        gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-        gl.uniform2f(mouseLocation, mouseX, mouseY);
-        gl.uniform1f(distortionStrengthLocation, parseFloat(document.getElementById('distortion-strength').value));
-        gl.uniform1f(distortionRadiusLocation, parseFloat(document.getElementById('distortion-radius').value));
-        gl.uniform1f(rgbSeparationLocation, parseFloat(document.getElementById('rgb-separation').value));
-        
-        rippleStrength *= 0.95;
-        gl.uniform1f(rippleStrengthLocation, rippleStrength);
-
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        requestAnimationFrame(render);
-    }
-
     function randomizeSettings() {
         document.getElementById('text-input').value = "Random!";
         document.getElementById('font-size').value = Math.floor(Math.random() * 88) + 12;
@@ -251,35 +245,20 @@ function init() {
         document.getElementById('distortion-radius-value').textContent = `${document.getElementById('distortion-radius').value}px`;
         document.getElementById('rgb-separation-value').textContent = document.getElementById('rgb-separation').value;
         document.getElementById('tiling-value').textContent = `${document.getElementById('tiling').value}x${document.getElementById('tiling').value}`;
-        updateTexture();
+        needsTextureUpdate = true;
     }
 
-    document.getElementById('text-input').addEventListener('input', updateTexture);
-    document.getElementById('font-size').addEventListener('input', (e) => {
-        document.getElementById('font-size-value').textContent = `${e.target.value}px`;
-        updateTexture();
-    });
-    document.getElementById('distortion-strength').addEventListener('input', (e) => {
-        document.getElementById('distortion-strength-value').textContent = e.target.value;
-        render();
-    });
-    document.getElementById('distortion-radius').addEventListener('input', (e) => {
-        document.getElementById('distortion-radius-value').textContent = `${e.target.value}px`;
-        render();
-    });
-    document.getElementById('rgb-separation').addEventListener('input', (e) => {
-        document.getElementById('rgb-separation-value').textContent = e.target.value;
-        render();
-    });
-    document.getElementById('background-color').addEventListener('input', updateTexture);
-    document.getElementById('text-color').addEventListener('input', updateTexture);
+    document.getElementById('text-input').addEventListener('input', () => { needsTextureUpdate = true; });
+    document.getElementById('font-size').addEventListener('input', debouncedUpdateTexture);
+    document.getElementById('distortion-strength').addEventListener('input', () => { needsRender = true; });
+    document.getElementById('distortion-radius').addEventListener('input', () => { needsRender = true; });
+    document.getElementById('rgb-separation').addEventListener('input', () => { needsRender = true; });
+    document.getElementById('background-color').addEventListener('input', debouncedUpdateTexture);
+    document.getElementById('text-color').addEventListener('input', debouncedUpdateTexture);
     document.getElementById('randomize').addEventListener('click', randomizeSettings);
     document.getElementById('reset').addEventListener('click', resetSettings);
 
-    document.getElementById('tiling').addEventListener('input', (e) => {
-        document.getElementById('tiling-value').textContent = `${e.target.value}x${e.target.value}`;
-        updateTexture();
-    });
+    document.getElementById('tiling').addEventListener('input', debouncedUpdateTexture);
 
     function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio || 1;
@@ -288,10 +267,11 @@ function init() {
         canvas.style.width = window.innerWidth + 'px';
         canvas.style.height = window.innerHeight + 'px';
         gl.viewport(0, 0, canvas.width, canvas.height);
-        updateTexture();
+        needsTextureUpdate = true;
+        needsRender = true;
     }
 
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', debounce(resizeCanvas, 100));
     resizeCanvas();
 
     render();

@@ -80,7 +80,7 @@
             float dist = distance(l, p);
             float maxDist = u_distortionRadius / min(u_resolution.x, u_resolution.y);
             float factor = clamp(1.0 - dist / maxDist, 0.0, 1.0);
-            factor = -pow(factor, 2.0) * u_distortionStrength;
+            factor = -factor * factor * u_distortionStrength;
             return factor * (p - l);
         }
 
@@ -95,13 +95,14 @@
             m += ripple * (p - l);
             
             vec3 color = vec3(0.0);
+            float s = 0.175;
             for (int i = 0; i < 10; i++) {
-                float s = 0.175 + 0.005 * float(i);
                 color.r += texture2D(u_image, p + s * m).r;
                 color.g += texture2D(u_image, p + (s + u_rgbSeparation) * m).g;
                 color.b += texture2D(u_image, p + (s + u_rgbSeparation * 2.0) * m).b;
+                s += 0.005;
             }
-            color /= 10.0;
+            color *= 0.1;
             
             gl_FragColor = vec4(color, 1.0);
         }
